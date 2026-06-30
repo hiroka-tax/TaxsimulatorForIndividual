@@ -1,0 +1,2 @@
+# TaxsimulatorForIndividual
+個人所得税及び消費税（簡易課税）について計算するシミュレーター
