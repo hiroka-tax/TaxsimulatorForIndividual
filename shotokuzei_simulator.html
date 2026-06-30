@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>個人事業主 所得税・消費税シミュレーター</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+      background: #f4f6f9;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a5276, #2e86c1);
+      color: white;
+      padding: 28px 20px 24px;
+      text-align: center;
+    }
+    header h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: 0.03em; }
+    header p { margin-top: 8px; font-size: 0.85rem; opacity: 0.85; }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 680px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 22px 22px 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    }
+
+    .card.full { grid-column: 1 / -1; }
+
+    .card h2 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #1a5276;
+      border-left: 4px solid #2e86c1;
+      padding-left: 10px;
+      margin-bottom: 16px;
+    }
+
+    .field { margin-bottom: 13px; }
+    .field label {
+      display: block;
+      font-size: 0.8rem;
+      color: #555;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .field label .note {
+      font-weight: 400;
+      color: #888;
+      font-size: 0.75rem;
+    }
+
+    .field input[type="text"],
+    .field select {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid #cdd5df;
+      border-radius: 7px;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+      background: #fafbfc;
+    }
+    .field input[type="text"]:focus,
+    .field select:focus {
+      outline: none;
+      border-color: #2e86c1;
+      background: white;
+    }
+
+    .field .radio-group { display: flex; gap: 16px; margin-top: 4px; }
+    .field .radio-group label {
+      display: flex; align-items: center; gap: 5px;
+      font-weight: 400; color: #333; font-size: 0.85rem; cursor: pointer;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 480px) {
+      .result-grid { grid-template-columns: 1fr; }
+    }
+
+    .result-item {
+      background: #f0f5fb;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .result-item.highlight {
+      background: linear-gradient(135deg, #1a5276, #2e86c1);
+      color: white;
+    }
+    .result-item .label {
+      font-size: 0.75rem;
+      color: #5d7a99;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    .result-item.highlight .label { color: rgba(255,255,255,0.75); }
+    .result-item .value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #1a5276;
+    }
+    .result-item.highlight .value { color: white; font-size: 1.4rem; }
+
+    .result-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 4px;
+    }
+    .result-table tr { border-bottom: 1px solid #e8ecf0; }
+    .result-table tr:last-child { border-bottom: none; }
+    .result-table td { padding: 8px 4px; }
+    .result-table td:last-child { text-align: right; font-weight: 600; color: #1a5276; }
+    .result-table tr.subtotal td { color: #888; font-size: 0.8rem; }
+    .result-table tr.total td { font-weight: 700; border-top: 2px solid #2e86c1; padding-top: 10px; color: #1a5276; }
+
+    .disclaimer {
+      grid-column: 1 / -1;
+      font-size: 0.75rem;
+      color: #888;
+      text-align: center;
+      line-height: 1.7;
+      margin-top: 4px;
+    }
+    .disclaimer a { color: #2e86c1; }
+
+    .tag-2wari {
+      display: inline-block;
+      background: #e8f6e8;
+      color: #2e7d32;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 20px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .sep { grid-column: 1 / -1; border: none; border-top: 1px solid #e0e5ec; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>個人事業主 所得税・消費税シミュレーター</h1>
+  <p>事業所得・各種控除を入力すると、所得税と消費税の概算納税額を自動計算します</p>
+</header>
+
+<div class="container">
+
+  <!-- ① 事業収支 -->
+  <div class="card">
+    <h2>① 事業収支</h2>
+
+    <div class="field">
+      <label>利益金額（税引き前）<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="profit" value="650,000" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+
+    <div class="field">
+      <label>青色申告特別控除</label>
+      <div class="radio-group">
+        <label><input type="radio" name="aoshiro" value="650000" checked onchange="calc()"> 65万円（e-Tax）</label>
+        <label><input type="radio" name="aoshiro" value="550000" onchange="calc()"> 55万円（紙申告）</label>
+        <label><input type="radio" name="aoshiro" value="100000" onchange="calc()"> 10万円</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>その他所得（給与・雑所得等）<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="other_income" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+  </div>
+
+  <!-- 青色事業専従者 -->
+  <div class="card full">
+    <h2>青色事業専従者の給与所得・所得税</h2>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <div>
+        <div class="field">
+          <label>給与収入（年収）<span class="note"> 円</span></label>
+          <input type="text" inputmode="numeric" id="senj_kyuyo" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+        </div>
+        <div class="field">
+          <label>雑所得（公的年金）収入<span class="note"> 円</span></label>
+          <div class="radio-group" style="margin-bottom:6px;">
+            <label><input type="radio" name="senj_age" value="under65" checked onchange="calcSenj()"> 65歳未満</label>
+            <label><input type="radio" name="senj_age" value="over65" onchange="calcSenj()"> 65歳以上</label>
+          </div>
+          <input type="text" inputmode="numeric" id="senj_nenkin" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+        </div>
+        <div class="field">
+          <label>社会保険料控除<span class="note"> 円</span></label>
+          <input type="text" inputmode="numeric" id="senj_shakai" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+        </div>
+        <div class="field">
+          <label>その他の所得控除<span class="note"> 円（生命保険料控除・医療費控除等）</span></label>
+          <input type="text" inputmode="numeric" id="senj_other" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+        </div>
+      </div>
+
+      <div id="senj_result" style="display:none;">
+        <table class="result-table">
+          <tr class="subtotal"><td>給与収入</td><td id="s_kyuyo">－</td></tr>
+          <tr class="subtotal"><td>　給与所得控除</td><td id="s_kojo">－</td></tr>
+          <tr><td>給与所得</td><td id="s_shotoku">－</td></tr>
+          <tr class="subtotal" id="s_nenkin_row" style="display:none;"><td>年金収入</td><td id="s_nenkin">－</td></tr>
+          <tr class="subtotal" id="s_nenkin_kojo_row" style="display:none;"><td>　公的年金等控除</td><td id="s_nenkin_kojo">－</td></tr>
+          <tr id="s_nenkin_shotoku_row" style="display:none;"><td>雑所得（公的年金）</td><td id="s_nenkin_shotoku">－</td></tr>
+          <tr class="subtotal"><td>　社会保険料控除</td><td id="s_shakai">－</td></tr>
+          <tr class="subtotal"><td>　その他の控除</td><td id="s_other">－</td></tr>
+          <tr class="subtotal"><td>　基礎控除</td><td id="s_kiso">－</td></tr>
+          <tr><td>課税所得金額</td><td id="s_kazei">－</td></tr>
+          <tr class="subtotal"><td>所得税額</td><td id="s_tax">－</td></tr>
+          <tr class="subtotal"><td>　復興特別所得税（2.1%）</td><td id="s_fukko">－</td></tr>
+          <tr class="total"><td>所得税合計</td><td id="s_total">－</td></tr>
+          <tr><td colspan="2" style="padding-top:14px;padding-bottom:4px;font-weight:700;color:#1a5276;font-size:0.85rem;">住民税 内訳（概算）</td></tr>
+          <tr class="subtotal"><td>　基礎控除（住民税）</td><td id="s_j_kiso">－</td></tr>
+          <tr><td>課税所得金額（住民税）</td><td id="s_j_kazei">－</td></tr>
+          <tr class="subtotal"><td>所得割（10%）</td><td id="s_j_shotokuwari">－</td></tr>
+          <tr class="subtotal"><td>均等割（令和6年以降）</td><td id="s_j_kintoukari">－</td></tr>
+          <tr class="total"><td>住民税合計</td><td id="s_j_total">－</td></tr>
+        </table>
+        <p style="font-size:0.75rem;color:#888;margin-top:8px;">※ 専従者自身の確定申告の参考値です<br>※ 基礎控除は専従者の合計所得に応じて自動計算（令和7年分以降）</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 所得控除 -->
+  <div class="card">
+    <h2>② 所得控除</h2>
+
+    <div class="field">
+      <label>社会保険料控除<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="shakai" value="224,260" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+
+    <div class="field">
+      <label>小規模共済等掛金控除<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="shokibo" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+
+    <div class="field">
+      <label>生命保険料控除<span class="note"> 円（最大12万円）</span></label>
+      <input type="text" inputmode="numeric" id="seimei" value="16,548" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+
+    <div class="field">
+      <label>医療費控除<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="iryou" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+
+    <div class="field">
+      <label>寄附金控除（ふるさと納税等）<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="kifu" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+
+    <div class="field">
+      <label>配偶者（特別）控除<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="haigusha" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+
+    <div class="field">
+      <label>扶養控除<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="fuyo" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+
+    <div class="field">
+      <label>障害者控除・その他控除<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="other_deduction" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+  </div>
+
+  <!-- ③ 消費税 -->
+  <div class="card">
+    <h2>③ 消費税</h2>
+
+    <div class="field">
+      <label>売上高（税込・課税分）<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="sales" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+
+    <div class="field">
+      <label>計算方式</label>
+      <div class="radio-group">
+        <label><input type="radio" name="tax_method" value="2wari" checked onchange="calc()">
+          2割特例 <span class="tag-2wari">〜2026/9</span></label>
+        <label><input type="radio" name="tax_method" value="kantan" onchange="calc()"> 簡易課税</label>
+        <label><input type="radio" name="tax_method" value="genka" onchange="calc()"> 原則課税</label>
+      </div>
+    </div>
+
+    <div class="field" id="field_gyoshu">
+      <label>事業区分（簡易課税）</label>
+      <select id="gyoshu" onchange="calc()">
+        <option value="0.9">第1種 卸売業（90%）</option>
+        <option value="0.8">第2種 小売業（80%）</option>
+        <option value="0.7">第3種 製造業等（70%）</option>
+        <option value="0.6">第4種 飲食店業等（60%）</option>
+        <option value="0.5" selected>第5種 サービス業等（50%）</option>
+        <option value="0.4">第6種 不動産業（40%）</option>
+      </select>
+    </div>
+
+    <div class="field" id="field_kaikei">
+      <label>課税仕入れ額（税込）<span class="note"> 円（原則課税の場合）</span></label>
+      <input type="text" inputmode="numeric" id="kaikei" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+
+    <div class="field">
+      <label>消費税中間納付額<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="shohi_chukan" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+  </div>
+
+  <!-- ④ 予定納税 -->
+  <div class="card">
+    <h2>④ 予定納税・その他</h2>
+
+    <div class="field">
+      <label>予定納税額（第1期＋第2期）<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="yotei" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+
+    <div class="field">
+      <label>税額控除（住宅ローン控除等）<span class="note"> 円</span></label>
+      <input type="text" inputmode="numeric" id="zei_koujyo" value="0" oninput="onNumInput(this)" onblur="fmtInput(this)">
+    </div>
+  </div>
+
+  <!-- 結果 -->
+  <div class="card full">
+    <h2>計算結果（概算）</h2>
+
+    <div class="result-grid" id="results">
+      <!-- JS で描画 -->
+    </div>
+
+    <table class="result-table" id="detail_table" style="margin-top:18px;">
+    </table>
+  </div>
+
+  <p class="disclaimer">
+    ※ このシミュレーターは概算値であり、正確な税額は確定申告書に基づきます。<br>
+    詳しくは税理士にご相談ください。<br>
+    基礎控除・給与所得控除・税率は令和7年分以降の規定を基に計算しています。
+    <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank">所得税の税率（国税庁）</a>
+    <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm" target="_blank">給与所得控除（国税庁）</a>
+    <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm" target="_blank">基礎控除（国税庁）</a>
+    <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1600.htm" target="_blank">公的年金等の雑所得（国税庁）</a>
+  </p>
+</div>
+
+<script>
+function rawNum(id) {
+  return parseFloat(document.getElementById(id).value.replace(/,/g, '')) || 0;
+}
+function v(id) { return rawNum(id); }
+
+// 給与所得控除：令和7年分以降（国税庁 No.1410）
+function kyuyoShotoku(kyuyo) {
+  if (kyuyo <= 0) return { kojo: 0, shotoku: 0 };
+  let kojo;
+  if (kyuyo <= 1900000)      kojo = 650000;
+  else if (kyuyo <= 3600000) kojo = Math.floor(kyuyo * 0.30) + 80000;
+  else if (kyuyo <= 6600000) kojo = Math.floor(kyuyo * 0.20) + 440000;
+  else if (kyuyo <= 8500000) kojo = Math.floor(kyuyo * 0.10) + 1100000;
+  else                        kojo = 1950000;
+  return { kojo, shotoku: Math.max(0, kyuyo - kojo) };
+}
+
+function nenkinZatsu(nenkin, over65) {
+  if (nenkin <= 0) return { kojo: 0, shotoku: 0 };
+  let kojo;
+  if (over65) {
+    if (nenkin <= 1100000)      kojo = nenkin;
+    else if (nenkin <= 3299999) kojo = 1100000;
+    else if (nenkin <= 4099999) kojo = Math.floor(nenkin * 0.25) + 275000;
+    else if (nenkin <= 7699999) kojo = Math.floor(nenkin * 0.15) + 685000;
+    else if (nenkin <= 9999999) kojo = Math.floor(nenkin * 0.05) + 1455000;
+    else                        kojo = 1955000;
+  } else {
+    if (nenkin <= 600000)       kojo = nenkin;
+    else if (nenkin <= 1299999) kojo = 600000;
+    else if (nenkin <= 4099999) kojo = Math.floor(nenkin * 0.25) + 275000;
+    else if (nenkin <= 7699999) kojo = Math.floor(nenkin * 0.15) + 685000;
+    else if (nenkin <= 9999999) kojo = Math.floor(nenkin * 0.05) + 1455000;
+    else                        kojo = 1955000;
+  }
+  return { kojo, shotoku: Math.max(0, nenkin - kojo) };
+}
+
+function calcSenj() {
+  const kyuyo = v('senj_kyuyo');
+  const nenkin = v('senj_nenkin');
+  const el = document.getElementById('senj_result');
+  if (kyuyo <= 0 && nenkin <= 0) { el.style.display = 'none'; return; }
+  el.style.display = '';
+
+  const { kojo, shotoku } = kyuyoShotoku(kyuyo);
+  const over65 = document.querySelector('input[name="senj_age"]:checked').value === 'over65';
+  const { kojo: nenkinKojo, shotoku: nenkinShotoku } = nenkinZatsu(nenkin, over65);
+  const gokeiShotoku = shotoku + nenkinShotoku;
+
+  const shakai = v('senj_shakai');
+  const other  = v('senj_other');
+  const kiso   = kisokojo(gokeiShotoku);
+  const kazei  = Math.max(0, Math.floor((gokeiShotoku - shakai - other - kiso) / 1000) * 1000);
+  const tax    = shotokuZei(kazei);
+  const fukko  = Math.floor(tax * 0.021);
+  const total  = tax + fukko;
+
+  const hasNenkin = nenkin > 0;
+  document.getElementById('s_nenkin_row').style.display        = hasNenkin ? '' : 'none';
+  document.getElementById('s_nenkin_kojo_row').style.display   = hasNenkin ? '' : 'none';
+  document.getElementById('s_nenkin_shotoku_row').style.display = hasNenkin ? '' : 'none';
+
+  const juminKiso = kisokojo_jumin(gokeiShotoku);
+  const juminKazei = Math.max(0, Math.floor((gokeiShotoku - shakai - other - juminKiso) / 1000) * 1000);
+  const juminShotokuWari = Math.floor(juminKazei * 0.10);
+  const juminKintouWari = juminKazei > 0 ? 6000 : 0;
+  const juminTotal = juminShotokuWari + juminKintouWari;
+
+  document.getElementById('s_kyuyo').textContent          = fmt(kyuyo);
+  document.getElementById('s_kojo').textContent           = '− ' + fmt(kojo);
+  document.getElementById('s_shotoku').textContent        = fmt(shotoku);
+  document.getElementById('s_nenkin').textContent         = fmt(nenkin);
+  document.getElementById('s_nenkin_kojo').textContent    = '− ' + fmt(nenkinKojo);
+  document.getElementById('s_nenkin_shotoku').textContent = fmt(nenkinShotoku);
+  document.getElementById('s_shakai').textContent         = '− ' + fmt(shakai);
+  document.getElementById('s_other').textContent          = '− ' + fmt(other);
+  document.getElementById('s_kiso').textContent           = '− ' + fmt(kiso);
+  document.getElementById('s_kazei').textContent          = fmt(kazei);
+  document.getElementById('s_tax').textContent            = fmt(tax);
+  document.getElementById('s_fukko').textContent          = '+ ' + fmt(fukko);
+  document.getElementById('s_total').textContent          = fmt(total);
+  document.getElementById('s_j_kiso').textContent         = '− ' + fmt(juminKiso);
+  document.getElementById('s_j_kazei').textContent        = fmt(juminKazei);
+  document.getElementById('s_j_shotokuwari').textContent  = fmt(juminShotokuWari);
+  document.getElementById('s_j_kintoukari').textContent   = juminKazei > 0 ? fmt(juminKintouWari) : '－';
+  document.getElementById('s_j_total').textContent        = fmt(juminTotal);
+}
+
+function onNumInput(el) {
+  el.value = el.value.replace(/[^0-9\-]/g, '');
+  calc();
+  calcSenj();
+}
+
+function fmtInput(el) {
+  const n = parseFloat(el.value.replace(/,/g, ''));
+  if (!isNaN(n)) el.value = n.toLocaleString('ja-JP');
+  calc();
+  calcSenj();
+}
+function r(name) {
+  return parseFloat(document.querySelector(`input[name="${name}"]:checked`).value);
+}
+function fmt(n) {
+  if (n === null || n === undefined) return '－';
+  return Math.round(n).toLocaleString('ja-JP') + ' 円';
+}
+
+function shotokuZei(kazei) {
+  if (kazei <= 0) return 0;
+  const brackets = [
+    [1950000, 0.05, 0],
+    [3300000, 0.10, 97500],
+    [6950000, 0.20, 427500],
+    [9000000, 0.23, 636000],
+    [18000000, 0.33, 1536000],
+    [40000000, 0.40, 2796000],
+    [Infinity, 0.45, 4796000],
+  ];
+  for (const [limit, rate, deduct] of brackets) {
+    if (kazei <= limit) return Math.floor(kazei * rate - deduct);
+  }
+}
+
+// 住民税の基礎控除
+function kisokojo_jumin(gokei) {
+  if (gokei <= 24000000) return 430000;
+  if (gokei <= 24500000) return 290000;
+  if (gokei <= 25000000) return 150000;
+  return 0;
+}
+
+// 基礎控除：令和7年分・令和8年分（国税庁 No.1199）
+function kisokojo(gokei) {
+  if (gokei <= 1320000)  return 950000; // 132万以下：95万
+  if (gokei <= 3360000)  return 880000; // 132万超〜336万以下：88万
+  if (gokei <= 4890000)  return 680000; // 336万超〜489万以下：68万
+  if (gokei <= 6550000)  return 630000; // 489万超〜655万以下：63万
+  if (gokei <= 23500000) return 580000; // 655万超〜2,350万以下：58万
+  if (gokei <= 24000000) return 480000; // 2,350万超〜2,400万以下：48万
+  if (gokei <= 24500000) return 320000; // 2,400万超〜2,450万以下：32万
+  if (gokei <= 25000000) return 160000; // 2,450万超〜2,500万以下：16万
+  return 0;
+}
+
+function calc() {
+  // 事業所得
+  const profit = v('profit');
+  const aoshiro = r('aoshiro');
+  const jigyoShotoku = Math.max(0, profit - aoshiro);
+
+  // 合計所得
+  const otherIncome = v('other_income');
+  const gokeiShotoku = jigyoShotoku + otherIncome;
+
+  // 所得控除
+  const shakai = v('shakai');
+  const shokibo = v('shokibo');
+  const seimei = Math.min(v('seimei'), 120000);
+  const iryou = v('iryou');
+  const kifu = v('kifu');
+  const haigusha = v('haigusha');
+  const fuyo = v('fuyo');
+  const other_d = v('other_deduction');
+  const kiso = kisokojo(gokeiShotoku);
+
+  const shotokuKojo = shakai + shokibo + seimei + iryou + kifu + haigusha + fuyo + other_d + kiso;
+
+  // 課税所得
+  const kazeiShotoku = Math.max(0, gokeiShotoku - shotokuKojo);
+
+  // 所得税
+  const shotokuTax = shotokuZei(kazeiShotoku);
+
+  // 復興特別所得税
+  const fukko = Math.floor(shotokuTax * 0.021);
+
+  // 税額控除
+  const zeiKojo = v('zei_koujyo');
+  const shotokuTaxAfter = Math.max(0, shotokuTax + fukko - zeiKojo);
+
+  // 住民税（概算）
+  const juminKiso = kisokojo_jumin(gokeiShotoku);
+  const juminKazei = Math.max(0, Math.floor((gokeiShotoku - (shotokuKojo - kiso + juminKiso)) / 1000) * 1000);
+  const juminShotokuWari = Math.floor(juminKazei * 0.10);
+  const juminKintouWari = juminKazei > 0 ? 6000 : 0;
+  const jumin = juminShotokuWari + juminKintouWari;
+
+  // 予定納税
+  const yotei = v('yotei');
+  const nofuShotoku = shotokuTaxAfter - yotei;
+
+  // 消費税
+  const sales = v('sales');
+  const method = document.querySelector('input[name="tax_method"]:checked').value;
+  const uriageTax = Math.floor(sales * 10 / 110);
+  let shohiTax = 0;
+  let shohiDetail = '';
+
+  if (sales > 0) {
+    if (method === '2wari') {
+      shohiTax = Math.floor(uriageTax * 0.20);
+      shohiDetail = `売上消費税 ${fmt(uriageTax)} × 20%`;
+    } else if (method === 'kantan') {
+      const minashi = parseFloat(document.getElementById('gyoshu').value);
+      shohiTax = Math.floor(uriageTax * (1 - minashi));
+      shohiDetail = `売上消費税 ${fmt(uriageTax)} × (1 - ${(minashi*100).toFixed(0)}%)`;
+    } else {
+      const kaikei = v('kaikei');
+      const shiireTax = Math.floor(kaikei * 10 / 110);
+      shohiTax = Math.max(0, uriageTax - shiireTax);
+      shohiDetail = `売上消費税 ${fmt(uriageTax)} − 仕入消費税 ${fmt(shiireTax)}`;
+    }
+  }
+  const shohiChukan = v('shohi_chukan');
+  const nofuShohi = shohiTax - shohiChukan;
+
+  // --- UI更新 ---
+  const methodLabel = method === '2wari' ? '2割特例' : method === 'kantan' ? '簡易課税' : '原則課税';
+
+  document.getElementById('field_gyoshu').style.display = method === 'kantan' ? '' : 'none';
+  document.getElementById('field_kaikei').style.display = method === 'genka' ? '' : 'none';
+
+  document.getElementById('results').innerHTML = `
+    <div class="result-item">
+      <div class="label">事業所得</div>
+      <div class="value">${fmt(jigyoShotoku)}</div>
+    </div>
+    <div class="result-item">
+      <div class="label">合計所得金額</div>
+      <div class="value">${fmt(gokeiShotoku)}</div>
+    </div>
+    <div class="result-item">
+      <div class="label">所得控除合計</div>
+      <div class="value">${fmt(shotokuKojo)}</div>
+    </div>
+    <div class="result-item">
+      <div class="label">課税所得金額</div>
+      <div class="value">${fmt(kazeiShotoku)}</div>
+    </div>
+    <div class="result-item highlight">
+      <div class="label">所得税（確定申告納付額）</div>
+      <div class="value">${fmt(nofuShotoku)}</div>
+    </div>
+    <div class="result-item highlight">
+      <div class="label">消費税 納付額（${methodLabel}）</div>
+      <div class="value">${sales > 0 ? fmt(nofuShohi) : '－'}</div>
+    </div>
+    <div class="result-item">
+      <div class="label">住民税（概算）</div>
+      <div class="value">${fmt(jumin)}</div>
+    </div>
+    <div class="result-item">
+      <div class="label">合計税負担（所得税＋住民税＋消費税）</div>
+      <div class="value">${fmt(nofuShotoku + jumin + (sales > 0 ? nofuShohi : 0))}</div>
+    </div>
+  `;
+
+  document.getElementById('detail_table').innerHTML = `
+    <tr><td colspan="2" style="padding-top:0;padding-bottom:6px;font-weight:700;color:#1a5276;font-size:0.85rem;">所得税 内訳</td></tr>
+    <tr class="subtotal"><td>利益金額</td><td>${fmt(profit)}</td></tr>
+    <tr class="subtotal"><td>　青色申告特別控除</td><td>− ${fmt(aoshiro)}</td></tr>
+    <tr class="subtotal"><td>事業所得</td><td>${fmt(jigyoShotoku)}</td></tr>
+    <tr class="subtotal"><td>　その他所得</td><td>+ ${fmt(otherIncome)}</td></tr>
+    <tr class="subtotal"><td>合計所得金額</td><td>${fmt(gokeiShotoku)}</td></tr>
+    <tr class="subtotal"><td>　社会保険料控除</td><td>− ${fmt(shakai)}</td></tr>
+    <tr class="subtotal"><td>　小規模共済等掛金控除</td><td>− ${fmt(shokibo)}</td></tr>
+    <tr class="subtotal"><td>　生命保険料控除</td><td>− ${fmt(seimei)}</td></tr>
+    <tr class="subtotal"><td>　医療費控除</td><td>− ${fmt(iryou)}</td></tr>
+    <tr class="subtotal"><td>　寄附金控除</td><td>− ${fmt(kifu)}</td></tr>
+    <tr class="subtotal"><td>　配偶者（特別）控除</td><td>− ${fmt(haigusha)}</td></tr>
+    <tr class="subtotal"><td>　扶養控除</td><td>− ${fmt(fuyo)}</td></tr>
+    <tr class="subtotal"><td>　障害者控除・その他</td><td>− ${fmt(other_d)}</td></tr>
+    <tr class="subtotal"><td>　基礎控除</td><td>− ${fmt(kiso)}</td></tr>
+    <tr class="subtotal"><td>所得控除合計</td><td>− ${fmt(shotokuKojo)}</td></tr>
+    <tr><td>課税所得金額</td><td>${fmt(kazeiShotoku)}</td></tr>
+    <tr><td>所得税額</td><td>${fmt(shotokuTax)}</td></tr>
+    <tr class="subtotal"><td>　復興特別所得税（2.1%）</td><td>+ ${fmt(fukko)}</td></tr>
+    <tr class="subtotal"><td>　税額控除</td><td>− ${fmt(zeiKojo)}</td></tr>
+    <tr class="subtotal"><td>　予定納税額</td><td>− ${fmt(yotei)}</td></tr>
+    <tr class="total"><td>確定申告 納付（還付）額</td><td>${fmt(nofuShotoku)}</td></tr>
+    <tr><td colspan="2" style="padding-top:16px;padding-bottom:6px;font-weight:700;color:#1a5276;font-size:0.85rem;">住民税 内訳（概算）</td></tr>
+    <tr class="subtotal"><td>合計所得金額</td><td>${fmt(gokeiShotoku)}</td></tr>
+    <tr class="subtotal"><td>　基礎控除（住民税）</td><td>− ${fmt(juminKiso)}</td></tr>
+    <tr class="subtotal"><td>　その他所得控除</td><td>− ${fmt(shotokuKojo - kiso)}</td></tr>
+    <tr><td>課税所得金額（住民税）</td><td>${fmt(juminKazei)}</td></tr>
+    <tr class="subtotal"><td>所得割（10%）</td><td>${fmt(juminShotokuWari)}</td></tr>
+    <tr class="subtotal"><td>均等割（令和6年以降）</td><td>${juminKazei > 0 ? fmt(juminKintouWari) : '－'}</td></tr>
+    <tr class="total"><td>住民税合計</td><td>${fmt(jumin)}</td></tr>
+    ${sales > 0 ? `
+    <tr><td colspan="2" style="padding-top:16px;padding-bottom:6px;font-weight:700;color:#1a5276;font-size:0.85rem;">消費税 内訳（${methodLabel}）</td></tr>
+    <tr class="subtotal"><td>売上高（課税分・税込）</td><td>${fmt(sales)}</td></tr>
+    <tr class="subtotal"><td>売上消費税</td><td>${fmt(uriageTax)}</td></tr>
+    <tr class="subtotal"><td>　${shohiDetail}</td><td></td></tr>
+    <tr class="subtotal"><td>消費税額</td><td>${fmt(shohiTax)}</td></tr>
+    <tr class="subtotal"><td>　中間納付額</td><td>− ${fmt(shohiChukan)}</td></tr>
+    <tr class="total"><td>消費税 確定申告 納付額</td><td>${fmt(nofuShohi)}</td></tr>
+    ` : ''}
+  `;
+}
+
+calc();
+calcSenj();
+</script>
+</body>
+</html>
